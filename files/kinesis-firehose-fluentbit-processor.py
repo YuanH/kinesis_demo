@@ -53,7 +53,7 @@ def transformLogEvent(payload):
 
     return_message = '{"index": "' + index + '"'
     return_message = return_message + ',"sourcetype":"' + sourcetype + '"'
-    return_message = return_message + ',"event": "' + str(payload) + '"}\n'
+    return_message = return_message + ',"event": ' + str(payload) + '}\n'
 
     return return_message + '\n'
 
