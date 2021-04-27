@@ -77,6 +77,10 @@ data "aws_iam_policy_document" "trust" {
         "firehose.amazonaws.com"
       ]
     }
+    principals {
+      type = "AWS"
+      identifiers = ["arn:aws:iam::433356891743:user/yh-user"]
+    }
   }
 }
 
@@ -122,4 +126,97 @@ data "aws_iam_policy_document" "firehose_role_base_permissions" {
     ]
     resources = ["*"]
   }
+}
+
+
+# Role for the transformation Lambda function attached to the kinesis stream
+resource "aws_iam_role" "kinesis_firehose_lambda" {
+  name        = "KinesisFirehoseLambdaRole"
+  description = "Role for Lambda function to transformation CloudWatch logs into Splunk compatible format"
+
+  assume_role_policy = <<POLICY
+{
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      }
+    }
+  ],
+  "Version": "2012-10-17"
+}
+POLICY
+
+}
+
+data "aws_iam_policy_document" "lambda_policy_doc" {
+  statement {
+    actions = [
+      "logs:GetLogEvents",
+    ]
+
+    resources = [
+      "*",
+    ]
+
+    effect = "Allow"
+  }
+
+  statement {
+    actions = [
+      "firehose:PutRecordBatch",
+    ]
+
+    resources = [
+      aws_kinesis_firehose_delivery_stream.kinesis-firehose.arn,
+    ]
+  }
+
+  statement {
+    actions = [
+      "logs:PutLogEvents",
+    ]
+
+    resources = [
+      "*",
+    ]
+
+    effect = "Allow"
+  }
+
+  statement {
+    actions = [
+      "logs:CreateLogGroup",
+    ]
+
+    resources = [
+      "*",
+    ]
+
+    effect = "Allow"
+  }
+
+  statement {
+    actions = [
+      "logs:CreateLogStream",
+    ]
+
+    resources = [
+      "*",
+    ]
+
+    effect = "Allow"
+  }
+}
+
+resource "aws_iam_policy" "lambda_transform_policy" {
+  name   = "LambdaTransformPolicy"
+  policy = data.aws_iam_policy_document.lambda_policy_doc.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_policy_role_attachment" {
+  role       = aws_iam_role.kinesis_firehose_lambda.name
+  policy_arn = aws_iam_policy.lambda_transform_policy.arn
 }
