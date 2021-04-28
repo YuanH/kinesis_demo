@@ -104,18 +104,27 @@ data "aws_iam_policy_document" "firehose_role_base_permissions" {
   statement {
     sid = "AllowBackupBucketWrite"
     actions = [
-      "s3:*" # this can be refined
+      "s3:AbortMultipartUpload",
+      "s3:GetBucketLocation",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:ListBucketMultipartUploads",
+      "s3:PutObject"
     ]
-    resources = ["*"]
+    resources = ["*"] # needs to be refined aws_s3_bucket.bucket.arn, "${aws_s3_bucket.bucket.arn}"
   }
 
   # allows the firehose delivery stream to read from its kinesis data stream
   statement {
     sid = "AllowKinesisDataStreamRead"
     actions = [
-      "kinesis:*" #need to refine
+      "kinesis:DescribeStream",
+      "kinesis:GetShardIterator",
+      "kinesis:GetRecords",
+      "kinesis:ListShards",
+      "kinesis:PutRecords" 
     ]
-    resources = ["*"]
+    resources = ["*"] # needs to be refined aws.kinesis_stream.kinesis_stream.arn
   }
 
   # allows the firehose delivery stream to log delivery failures to cw log group
