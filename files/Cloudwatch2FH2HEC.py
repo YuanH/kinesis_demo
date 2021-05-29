@@ -1,4 +1,3 @@
-# This will work with Python3
 """
 For processing data sent to Firehose by Cloudwatch Logs subscription filters.
 Additional processing of message into format for Splunk HTTP Event Collector - Event input (not Raw)
@@ -73,7 +72,7 @@ def transformLogEvent(log_event,acct,arn,loggrp,logstrm,filterName):
     
     region_name=arn.split(':')[3]
     
-    index = "splunk-test"
+    index = "aws_firewall_test"
     # note that the region_name is taken from the region for the Stream, this won't change if Cloudwatch from another account/region. Not used for this example function
     if "CloudTrail" in loggrp:
         sourcetype="aws:cloudtrail"
@@ -86,7 +85,8 @@ def transformLogEvent(log_event,acct,arn,loggrp,logstrm,filterName):
     return_message = return_message + ',"sourcetype":"' + sourcetype  + '"'
     return_message = return_message + ',"index":"' + index  + '"'
     return_message = return_message + ',"event": ' + json.dumps(log_event['message']) + '}\n'
-
+    
+    print(return_message)
     return return_message + '\n'
 
 
@@ -110,7 +110,9 @@ def processRecords(records,arn):
             }
         elif data['messageType'] == 'DATA_MESSAGE':
             data = ''.join([transformLogEvent(e,data['owner'],arn,data['logGroup'],data['logStream'],data['subscriptionFilters'][0]) for e in data['logEvents']])
-            data = base64.b64encode(json.dumps(data).encode('utf-8')).decode()
+            
+            data = base64.b64encode(data.encode('utf-8')).decode() #This is particularly tricky
+            
             yield {
                 'data': data,
                 'result': 'Ok',
@@ -251,5 +253,4 @@ def lambda_handler(event, context):
             print('Reingested %d/%d records out of %d' % (recordsReingestedSoFar, totalRecordsToBeReingested, len(event['records'])))
     else:
         print('No records to be reingested')
-
     return {"records": records}
