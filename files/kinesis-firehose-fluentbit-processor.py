@@ -1,11 +1,9 @@
-"""
-For processing data sent to Firehose by fluentbit Logs subscription filters.
-Additional processing of message into format for Splunk HTTP Event Collector - Event input (not Raw)
-Fluentbit Logs sends to Firehose records that look like this:
+# Sample log captured from kinesis stream
 
+"""
 {
   "invocationId": "invocationIdExample",
-  "deliverySteamArn": "arn:aws:kinesis:EXAMPLE",
+  "deliveryStreamArn": "arn:aws:kinesis:EXAMPLE",
   "region": "us-east-1",
   "records": [
     {
@@ -22,9 +20,9 @@ Fluentbit Logs sends to Firehose records that look like this:
     }
   ]
 }
-
-
 """
+
+from __future__ import print_function
 
 import base64
 import json
@@ -34,42 +32,45 @@ import boto3
 import os
 
 
-def transformLogEvent(log_event):    
+print('Loading function')
 
-    if "dev" in log_event:
-      index = "dev"
-    elif "qa"" in log_event:
-      index = "qa"
-    else:
-      index = "prod"
-    
-    sourcetype = "json"
+def transformLogEvent(log_event):
+
+    index = "splunk-test"
+    sourcetype = "k8s:json"
     print('Received log event %s' % (log_event))
-
+    
+    return_event = {}
+    return_event['index'] = index
+    return_event['event'] = str(log_event)
+    return_event['time'] = log_event['time']
+    return_event['sourcetype'] = sourcetype
+    
+    return json.dumps(return_event)
+    """
     # Need to add splunk specific time parsing here, this is dependent on log format that fluentbit generates
-
-    return_message = '{"index": "' + index + '"'
+    data=json.loads(payload)
+    print(data['time'])
+    
+    return_message = '{"index": "' + index + '"' 
     return_message = return_message + ',"sourcetype":"' + sourcetype + '"'
-    return_message = return_message + ',"event": ' + str(log_event) + '}\n'
-
-    print('return message %s' % (return_message))
+    return_message = return_message + ',"event": ' + str(payload) + '}\n'
 
     return return_message + '\n'
-
+    """
     
-    
-
-
 def processRecords(records,arn):
     for r in records:
         data = base64.b64decode(r['data']).decode('utf-8')
         
-        #data = json.loads(data)
+        data = json.loads(data)
         recId = r['recordId']
         
         data = transformLogEvent(data)
         yield {
                 'data': base64.b64encode(data.encode()).decode('utf-8'),
+                #'data': base64.b64encode(data.encode()), # surprisingly, this works sometimes
+                #'data': 'some giberrish' # Testing S3 backup
                 'result': 'Ok',
                 'recordId': recId
         }
