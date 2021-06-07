@@ -72,22 +72,26 @@ def transformLogEvent(log_event,acct,arn,loggrp,logstrm,filterName):
     
     region_name=arn.split(':')[3]
     
-    index = "aws_firewall_test"
+    index = "your index name here"
     # note that the region_name is taken from the region for the Stream, this won't change if Cloudwatch from another account/region. Not used for this example function
     if "CloudTrail" in loggrp:
         sourcetype="aws:cloudtrail"
     elif "VPC" in loggrp:
         sourcetype="aws:cloudwatchlogs:vpcflow"
     else:
-        sourcetype="aws:cloudwatchlogs:firewall"
+        sourcetype="aws:cloudwatchlogs:whatelse"
     
-    return_message = '{"time": ' + str(log_event['timestamp']) + ',"host": "' + arn  +'","source": "' + filterName +':' + loggrp + '"'
-    return_message = return_message + ',"sourcetype":"' + sourcetype  + '"'
-    return_message = return_message + ',"index":"' + index  + '"'
-    return_message = return_message + ',"event": ' + json.dumps(log_event['message']) + '}\n'
     
-    print(return_message)
-    return return_message + '\n'
+    return_event = {}
+    return_event['index'] = index
+    return_event['sourcetype'] = sourcetype
+    return_event['source'] = logstrm
+    return_event['host'] = arn
+    return_event['time'] = log_event['timestamp']
+    return_event['event'] = log_event['message']
+    
+    print(return_event)
+    return json.dumps(return_event)
 
 
 def processRecords(records,arn):
