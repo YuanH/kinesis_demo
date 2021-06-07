@@ -37,27 +37,34 @@ print('Loading function')
 def transformLogEvent(log_event):
 
     index = "splunk-test"
-    sourcetype = "k8s:json"
-    print('Received log event %s' % (log_event))
     
-    return_event = {}
-    return_event['index'] = index
-    return_event['event'] = str(log_event)
-    return_event['time'] = log_event['time']
-    return_event['sourcetype'] = sourcetype
-    
-    return json.dumps(return_event)
-    """
-    # Need to add splunk specific time parsing here, this is dependent on log format that fluentbit generates
-    data=json.loads(payload)
-    print(data['time'])
-    
-    return_message = '{"index": "' + index + '"' 
-    return_message = return_message + ',"sourcetype":"' + sourcetype + '"'
-    return_message = return_message + ',"event": ' + str(payload) + '}\n'
 
-    return return_message + '\n'
-    """
+    #
+    # New Logic
+    #
+
+    log_event = json.loads(log_event)
+
+    # Determining Sourcetype
+    sourcetype = log_event['kubernetes']['container_name']+":json"
+
+    # Timestampe parsing
+    return_event = {}
+    date_time = log_event['time'].split('.')[0]
+    pattern = '%Y-%m-%dT%H:%M:%S'
+    epoch = str(int(time.mktime(time.strptime(date_time, pattern)))) + '.' + log_event['time'].split('.')[1][:-1]
+    
+    # Constructing payload
+
+    return_event['index'] = index
+    return_event['time'] = epoch
+    return_event['sourcetype'] = sourcetype
+    return_event['host'] = log_event['kubernetes']['host']
+    return_event['event'] = log_event
+
+    print('return_event %s' % (return_event))
+
+    return json.dumps(return_event)
     
 def processRecords(records,arn):
     for r in records:
